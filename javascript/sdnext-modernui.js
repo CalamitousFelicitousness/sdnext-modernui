@@ -516,6 +516,7 @@ async function mainUiUx() {
   log('waitForUiPortal', `time=${Math.round(t1 - t0)}`);
   setupGenerateObservers();
   setupControlDynamicObservers();
+  setupMPTabObservers();
   uiuxOptionSettings();
   setUserColors();
   showContributors();

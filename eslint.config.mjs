@@ -47,6 +47,7 @@ const jsConfig = defineConfig([
         setupGenerateObservers: 'readonly',
         setupDynamicObservers: 'readonly',
         setupControlDynamicObservers: 'readonly',
+        setupMPTabObservers: 'readonly',
         setUserColors: 'readonly',
         showContributors: 'readonly',
         createButtonsForExtensions: 'readonly',
