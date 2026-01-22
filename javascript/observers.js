@@ -1,35 +1,35 @@
 async function setupMPTabObservers() {
-  // Handle Mode dropdown disabled state and sync Gradio State when MP tab is selected
-  // MP resize doesn't use Mode (Fixed/Crop/Fill/etc), but Method (upscaler) still applies
+  // Handle Mode dropdown disabled state when MP tab is selected
+  // MP resize doesn't use Mode (Fixed/Crop/Fill/etc), only Method (upscaler) applies
 
   const tabGroups = [
-    { prefix: 'control_before', modeId: 'control_before_resize_mode' },
-    { prefix: 'control_after', modeId: 'control_after_resize_mode' },
-    { prefix: 'control_mask', modeId: 'control_mask_resize_mode' },
+    { prefix: 'control_before', modeId: 'control_before_resize_mode', hasCustomButtons: true },
+    { prefix: 'control_after', modeId: 'control_after_resize_mode', hasCustomButtons: true },
+    { prefix: 'control_mask', modeId: 'control_mask_resize_mode', hasCustomButtons: true },
+    { prefix: 'img2img', modeId: 'img2img_resize_mode', hasCustomButtons: false },
   ];
 
-  tabGroups.forEach(({ prefix, modeId }) => {
-    const fixedBtn = document.querySelector(`[tabitemid="#${prefix}_scale_to_tabitem"]`);
-    const scaleBtn = document.querySelector(`[tabitemid="#${prefix}_scale_by_tabitem"]`);
-    const mpBtn = document.querySelector(`[tabitemid="#${prefix}_scale_mp_tabitem"]`);
+  tabGroups.forEach(({ prefix, modeId, hasCustomButtons }) => {
+    // Guard key - only set after successful initialization
+    const guardKey = `mpObserverInit${prefix.replace(/_/g, '')}`;
+    if (document.body.dataset[guardKey]) return;
 
-    // Find the actual Gradio tab buttons to sync state
-    // Gradio tabs: elem_id applies to content panel, buttons are in sibling tab-nav
+    // Find the Gradio tabs container and buttons
     const gradioTabsContainer = document.getElementById(`${prefix}_scale_tabs`);
     const gradioTabNav = gradioTabsContainer?.querySelector('.tab-nav');
     const gradioTabButtons = gradioTabNav ? Array.from(gradioTabNav.querySelectorAll('button')) : [];
-    const gradioFixedTab = gradioTabButtons[0]; // Fixed is first
-    const gradioScaleTab = gradioTabButtons[1]; // Scale is second
-    const gradioMpTab = gradioTabButtons[2]; // MP is third
+
+    // Use content-based selection instead of index-based
+    const gradioFixedTab = gradioTabButtons.find((btn) => btn.textContent?.trim() === 'Fixed');
+    const gradioScaleTab = gradioTabButtons.find((btn) => btn.textContent?.trim() === 'Scale');
+    const gradioMpTab = gradioTabButtons.find((btn) => btn.textContent?.trim() === 'MP');
 
     // Find the Mode dropdown container (Gradio wraps dropdowns in a div)
     const modeDropdown = document.getElementById(modeId);
     const modeContainer = modeDropdown?.closest('.gradio-dropdown, .wrap');
 
-    if (!mpBtn || !modeContainer) return;
-
-    // Storage key for this tab group's stored mode value
-    const storageKey = `${prefix}-stored-mode`;
+    // Early exit if required elements not found - don't set guard so we can retry
+    if (!modeContainer || !gradioMpTab) return;
 
     // Click blocker function
     const blockClick = (e) => {
@@ -46,42 +46,66 @@ async function setupMPTabObservers() {
     }
 
     function disableMode() {
-      // Store current mode value before disabling
-      if (modeDropdown) {
-        const currentValue = modeDropdown.querySelector('input')?.value || modeDropdown.value;
-        if (currentValue) setStored(storageKey, currentValue);
-      }
-      // Visually disable and block interaction
       modeContainer.style.opacity = '0.5';
       modeContainer.addEventListener('click', blockClick, true);
       modeContainer.addEventListener('mousedown', blockClick, true);
     }
 
-    // Add click listeners to Modern UI tab buttons - also click the Gradio tab to sync state
-    if (fixedBtn) {
-      fixedBtn.addEventListener('click', () => {
-        enableMode();
-        if (gradioFixedTab) gradioFixedTab.click();
-      });
-    }
-    if (scaleBtn) {
-      scaleBtn.addEventListener('click', () => {
-        enableMode();
-        if (gradioScaleTab) gradioScaleTab.click();
-      });
-    }
-    if (mpBtn) {
+    if (hasCustomButtons) {
+      // Control tabs: Modern UI has custom tab buttons that need to sync with Gradio
+      const fixedBtn = document.querySelector(`[tabitemid="#${prefix}_scale_to_tabitem"]`);
+      const scaleBtn = document.querySelector(`[tabitemid="#${prefix}_scale_by_tabitem"]`);
+      const mpBtn = document.querySelector(`[tabitemid="#${prefix}_scale_mp_tabitem"]`);
+
+      // Don't set guard if custom buttons not found - can retry later
+      if (!mpBtn) return;
+
+      if (fixedBtn) {
+        fixedBtn.addEventListener('click', () => {
+          enableMode();
+          if (gradioFixedTab) gradioFixedTab.click();
+        });
+      }
+      if (scaleBtn) {
+        scaleBtn.addEventListener('click', () => {
+          enableMode();
+          if (gradioScaleTab) gradioScaleTab.click();
+        });
+      }
       mpBtn.addEventListener('click', () => {
         disableMode();
         if (gradioMpTab) gradioMpTab.click();
       });
+
+      // Check initial state - if Modern UI MP tab is active
+      if (mpBtn.classList.contains('active')) {
+        disableMode();
+        if (gradioMpTab) gradioMpTab.click();
+      }
+    } else {
+      // img2img: Uses Gradio tabs directly via portals (no custom Modern UI buttons)
+      // Use event delegation on tab-nav to handle Gradio potentially re-rendering buttons
+      gradioTabNav.addEventListener('click', (e) => {
+        const clickedBtn = e.target.closest('button');
+        if (!clickedBtn) return;
+
+        const btnText = clickedBtn.textContent?.trim();
+        if (btnText === 'MP') {
+          disableMode();
+        } else if (btnText === 'Fixed' || btnText === 'Scale') {
+          enableMode();
+        }
+      });
+
+      // Check initial state - if Gradio MP tab is selected
+      const currentlySelectedTab = gradioTabNav.querySelector('button.selected');
+      if (currentlySelectedTab?.textContent?.trim() === 'MP') {
+        disableMode();
+      }
     }
 
-    // Check initial state - if MP tab is active, disable Mode and sync Gradio
-    if (mpBtn.classList.contains('active')) {
-      disableMode();
-      if (gradioMpTab) gradioMpTab.click();
-    }
+    // Mark as initialized only after successful setup
+    document.body.dataset[guardKey] = 'true';
   });
 }
 
