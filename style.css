@@ -39,6 +39,7 @@
   --color-red: palevioletred;
   --color-trace: #666666;
   --color-warning: #FF9900;
+  --color-legacy: #AA6688;
   --sd-border-radius: 5px;
   --sd-border-size: 2px;
   --sd-button-hover-color: var(--sd-button-selected-color);
@@ -86,7 +87,7 @@
   --sd-text-font: 'IBM Plex Mono', monospace;
   --sd-button-font: 'NotoSans', sans-serif;
   --sd-image-fit: scale-down;
-  --sd-panel-min-width: 512px;
+  --sd-panel-min-width: 256px;
   --sd-grid-image-size: 150px;
 }
 
@@ -1825,6 +1826,12 @@ h1 {
   padding: 0 !important;
 }
 
+.extra-details-tabs {
+  min-height: 10vh;
+  max-height: 35vh;
+  overflow: auto;
+}
+
 #models_civitai_tab textarea {
   resize: none !important;
   max-height: 2em;
@@ -2537,6 +2544,10 @@ button.active .icon-sort {
   mask-image: url(./html/svg/video.svg);
 }
 
+.icon-exclamation {
+  mask-image: url(./html/svg/square-exclamation.svg);
+}
+
 .icon-menuadd {
   mask-image: url(./html/svg/menu-add-fill.svg);
 }
@@ -2696,6 +2707,19 @@ div#main-nav {
 .network-folder::before {
   content: "󰉖 ";
   margin-right: 0.3em;
+  font-size: 1.1em;
+  color: var(--sd-label-color)
+}
+
+.network-local {
+  filter: contrast(0.8);
+}
+
+.network-local::before {
+  content: "󰴊 ";
+  margin-right: 0.3em;
+  font-size: 1.1em;
+  color: var(--sd-label-color)
 }
 
 .network-reference {
@@ -2703,8 +2727,10 @@ div#main-nav {
 }
 
 .network-reference::before {
-  content: "󰴊 ";
+  content: "󰉍 ";
   margin-right: 0.3em;
+  font-size: 1.1em;
+  color: var(--sd-label-color)
 }
 
 .network-model {
@@ -2714,6 +2740,8 @@ div#main-nav {
 .network-model::before {
   content: "󰴉 ";
   margin-right: 0.3em;
+  font-size: 1.1em;
+  color: var(--sd-label-color)
 }
 
 .extra-network-subdirs>button,
@@ -4810,6 +4838,10 @@ button>span {
   gap: var(--sd-gap-size-val);
 }
 
+.video_output {
+  padding: 0 0 var(--sd-panel-padding) 0;
+}
+
 div#control_params_control_tabitem .control-settings .gradio-accordion .form,
 div#video_params_control_tabitem .video-settings .gradio-accordion .form {
   flex-direction: row;
@@ -5238,6 +5270,7 @@ gallery-folder:hover {
   text-wrap: auto;
   color: var(--color-trace) !important;
   font-size: 0.9em !important;
+  cursor: help;
 }
 
 #control-result,
@@ -5258,6 +5291,7 @@ gallery-folder:hover {
 #control_extra_details_img img,
 #video_extra_details_img img {
   height: 100%;
+  max-height: 400px;
   object-fit: contain;
   overflow: hidden;
 }
@@ -6118,4 +6152,13 @@ input.border-none.subdued {
 #server-info-time {
   text-align: right;
   color: var(--sd-button-hover-color);
+}
+
+.legacy {
+  background: var(--color-legacy);
+  cursor: help;
+}
+
+.legacy:hover {
+  background: var(--color-legacy);
 }

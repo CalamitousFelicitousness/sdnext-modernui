@@ -22,7 +22,9 @@ export function applyDefaultLayout(mobile: boolean): void {
   appUiUx.querySelectorAll('[mobile]').forEach((tabItem) => {
     if (mobile) {
       if (tabItem.childElementCount === 0) {
-        const mobileTarget = appUiUx.querySelector(tabItem.getAttribute('mobile') ?? '');
+        const attr = tabItem.getAttribute('mobile');
+        if (!attr) return;
+        const mobileTarget = appUiUx.querySelector(attr);
         if (mobileTarget) {
           const targetParentId = mobileTarget.parentElement?.id;
           if (targetParentId) tabItem.setAttribute('mobile-restore', `#${targetParentId}`);
@@ -30,7 +32,9 @@ export function applyDefaultLayout(mobile: boolean): void {
         }
       }
     } else if (tabItem.childElementCount > 0) {
-      const mobileRestoreTarget = appUiUx.querySelector(tabItem.getAttribute('mobile-restore') ?? '');
+      const attr = tabItem.getAttribute('mobile-restore');
+      if (!attr) return;
+      const mobileRestoreTarget = appUiUx.querySelector(attr);
       if (mobileRestoreTarget) {
         tabItem.removeAttribute('mobile-restore');
         mobileRestoreTarget.append(tabItem.firstElementChild!);
@@ -68,6 +72,26 @@ export function switchMobile(): void {
   } else if (optslayout === 'Desktop') {
     applyDefaultLayout(false);
   }
+}
+
+async function audoHideImageControls(): Promise<void> {
+  const controls = [
+    'control_dynamic_resize',
+    'control_before_scale_group',
+    'control_before_resize_mask',
+  ];
+  const el = document.querySelector('#control-template-column-input');
+  if (!el) return;
+  new MutationObserver(() => {
+    const hidden = el.classList.contains('minimize');
+    for (const control of controls) {
+      const controlEl = document.getElementById(control);
+      if (controlEl) {
+        if (hidden) controlEl.classList.add('hidden');
+        else controlEl.classList.remove('hidden');
+      }
+    }
+  }).observe(el, { childList: false, subtree: false, attributes: true });
 }
 
 export async function applyAutoHide(): Promise<void> {
@@ -122,6 +146,7 @@ export async function applyAutoHide(): Promise<void> {
       if (getStored(`hide_${id}`)) (panel as HTMLElement).click();
     }
   });
+  audoHideImageControls();
 }
 
 export function setupAnimationEventListeners(): void {
