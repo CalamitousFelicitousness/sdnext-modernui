@@ -1,10 +1,58 @@
+let initialized = false;
+
+async function setupLogButtons(): Promise<void> {
+  const serverLog = document.getElementById('logMonitorData');
+  const btnServerWrap = document.getElementById('btn_console_log_server_wrap');
+  if (btnServerWrap) {
+    btnServerWrap.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === 'nowrap' ? 'break-spaces' : 'nowrap';
+    };
+  }
+  const clientLog = document.getElementById('logMonitorJS');
+  const btnClientWrap = document.getElementById('btn_console_log_client_wrap');
+  if (btnClientWrap) {
+    btnClientWrap.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (clientLog) clientLog.classList.toggle('wrap-div');
+    };
+  }
+  const btnServerCopy = document.getElementById('btn_console_log_server_copy');
+  if (btnServerCopy) {
+    btnServerCopy.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (serverLog) {
+        // serverLog is tbody, we need to get the text content of each row and join them with newlines
+        const text = Array.from(serverLog.children).map((row) => row.textContent || '').join('\n');
+        navigator.clipboard.writeText(text).then(() => log('copyServerLog'));
+      }
+    };
+  }
+  const btnClientCopy = document.getElementById('btn_console_log_client_copy');
+  if (btnClientCopy) {
+    btnClientCopy.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (clientLog) {
+        const text = Array.from(clientLog.children).map((row) => row.textContent || '').join('\n');
+        navigator.clipboard.writeText(text).then(() => log('copyClientLog'));
+      }
+    };
+  }
+  if (btnServerWrap && btnClientWrap && btnServerCopy && btnClientCopy) initialized = true;
+}
+
 /* Logger setup and error overlay helpers for ModernUI. */
 export function logPrettyPrint(...args: unknown[]): string {
+  if (!initialized) setupLogButtons();
   let output = '';
   const dt = new Date();
   const [h, m, s, ms] = [dt.getHours().toString(), dt.getMinutes().toString(), dt.getSeconds().toString(), dt.getMilliseconds().toString()];
   const ts = `${h.padStart(2, '0')}:${m.padStart(2, '0')}:${s.padStart(2, '0')}.${ms.padStart(3, '0')}`;
-  output += `<div class="log-row"><span class="log-date">${ts}</span>`;
+  output += `<div class="log-row"><span class="log-date">${ts}</span> `;
 
   for (let i = 0; i < args.length; i++) {
     let arg = args[i];
@@ -28,7 +76,7 @@ export function logPrettyPrint(...args: unknown[]): string {
     output += `<span class="log-${(typeof arg)} ${acolor}">`;
     if (typeof arg === 'object') output += JSON.stringify(arg);
     else output += arg;
-    output += ' </span>';
+    output += '</span> ';
   }
   output += '</div>';
   return output;
@@ -42,6 +90,7 @@ export async function setupLogger(): Promise<void> {
   document.body.append(logMonitorJS);
   window.logger = logMonitorJS;
   window.logPrettyPrint = logPrettyPrint;
+  setupLogButtons();
 }
 
 export function largeErrorOverlay(msg: string, err: Error): void {

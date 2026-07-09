@@ -1113,19 +1113,25 @@ function toggleHide(name) {
 window.toggleHide = toggleHide;
 function jsonToHtml(heading, json, cls = "") {
   if (!json) return "";
-  const entries = Object.entries(json);
-  if (entries.length === 0) return "";
+  let lst = json;
+  if (!Array.isArray(json)) lst = [json];
+  if (lst.length === 0) return "";
   return `
     <h3 onclick="toggleHide('server-info-table-${heading}')">${heading}</h3>
     <div class="server-info-table ${cls}" id="server-info-table-${heading}">
-      <table class="table-wrap">
-        ${entries.map(([key, value]) => `
-            <tr>
-              <td>${key}</td>
-              <td>${typeof value === "object" ? JSON.stringify(value) : value}</td>
-            </tr>
-          `).join("")}
-      </table>
+      ${lst.map((item) => {
+    const entries = Object.entries(item);
+    return `
+          <table class="table-wrap">
+            ${entries.map(([key, value]) => `
+                <tr>
+                  <td>${key}</td>
+                  <td>${typeof value === "object" ? JSON.stringify(value) : value}</td>
+                </tr>
+              `).join("")}
+          </table>
+        `;
+  }).join("")}
     </div>
   `;
 }
@@ -1204,12 +1210,57 @@ async function initServerInfo() {
 }
 
 // src/logger.ts
+var initialized = false;
+async function setupLogButtons() {
+  const serverLog = document.getElementById("logMonitorData");
+  const btnServerWrap = document.getElementById("btn_console_log_server_wrap");
+  if (btnServerWrap) {
+    btnServerWrap.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === "nowrap" ? "break-spaces" : "nowrap";
+    };
+  }
+  const clientLog = document.getElementById("logMonitorJS");
+  const btnClientWrap = document.getElementById("btn_console_log_client_wrap");
+  if (btnClientWrap) {
+    btnClientWrap.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (clientLog) clientLog.classList.toggle("wrap-div");
+    };
+  }
+  const btnServerCopy = document.getElementById("btn_console_log_server_copy");
+  if (btnServerCopy) {
+    btnServerCopy.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (serverLog) {
+        const text = Array.from(serverLog.children).map((row) => row.textContent || "").join("\n");
+        navigator.clipboard.writeText(text).then(() => log("copyServerLog"));
+      }
+    };
+  }
+  const btnClientCopy = document.getElementById("btn_console_log_client_copy");
+  if (btnClientCopy) {
+    btnClientCopy.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (clientLog) {
+        const text = Array.from(clientLog.children).map((row) => row.textContent || "").join("\n");
+        navigator.clipboard.writeText(text).then(() => log("copyClientLog"));
+      }
+    };
+  }
+  if (btnServerWrap && btnClientWrap && btnServerCopy && btnClientCopy) initialized = true;
+}
 function logPrettyPrint(...args) {
+  if (!initialized) setupLogButtons();
   let output = "";
   const dt = /* @__PURE__ */ new Date();
   const [h, m, s, ms] = [dt.getHours().toString(), dt.getMinutes().toString(), dt.getSeconds().toString(), dt.getMilliseconds().toString()];
   const ts = `${h.padStart(2, "0")}:${m.padStart(2, "0")}:${s.padStart(2, "0")}.${ms.padStart(3, "0")}`;
-  output += `<div class="log-row"><span class="log-date">${ts}</span>`;
+  output += `<div class="log-row"><span class="log-date">${ts}</span> `;
   for (let i = 0; i < args.length; i++) {
     let arg = args[i];
     if (arg === void 0) arg = "undefined";
@@ -1228,7 +1279,7 @@ function logPrettyPrint(...args) {
     output += `<span class="log-${typeof arg} ${acolor}">`;
     if (typeof arg === "object") output += JSON.stringify(arg);
     else output += arg;
-    output += " </span>";
+    output += "</span> ";
   }
   output += "</div>";
   return output;
@@ -1241,6 +1292,7 @@ async function setupLogger() {
   document.body.append(logMonitorJS);
   window.logger = logMonitorJS;
   window.logPrettyPrint = logPrettyPrint;
+  setupLogButtons();
 }
 function largeErrorOverlay(msg, err) {
   const overlay = document.createElement("div");
@@ -1718,22 +1770,10 @@ async function applyTweaks() {
   img2imgNav?.addEventListener("click", handleTabChange);
   controlNav?.addEventListener("click", handleTabChange);
   videoNav?.addEventListener("click", handleTabChange);
-  const serverLog = document.getElementById("logMonitorData");
-  const btnWrap = document.getElementById("btn_console_log_server_wrap");
-  if (btnWrap) {
-    btnWrap.onclick = () => {
-      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === "nowrap" ? "break-spaces" : "nowrap";
-    };
-  }
-  const clientLog = document.getElementById("logMonitorJS");
-  const btnClientWrap = document.getElementById("btn_console_log_client_wrap");
-  if (btnClientWrap) {
-    btnClientWrap.onclick = () => {
-      if (clientLog) clientLog.classList.toggle("wrap-div");
-    };
-  }
   const uiDisabled = Array.isArray(window.opts.ui_disabled) ? window.opts.ui_disabled : [];
   if (uiDisabled?.includes("logs")) {
+    const serverLog = document.getElementById("logMonitorData");
+    const clientLog = document.getElementById("logMonitorJS");
     if (serverLog) serverLog.style.display = "none";
     if (clientLog) clientLog.style.display = "none";
   }

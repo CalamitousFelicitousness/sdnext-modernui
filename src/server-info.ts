@@ -10,22 +10,28 @@ function toggleHide(name: string): void {
 // Expose toggleHide globally for inline onclick handlers in dynamically rendered HTML
 window.toggleHide = toggleHide;
 
-function jsonToHtml(heading: string, json: Record<string, unknown> | null | undefined, cls = ''): string {
+function jsonToHtml(heading: string, json: Record<string, unknown> | Record<string, unknown>[] | null | undefined, cls = ''): string {
   if (!json) return '';
-  const entries = Object.entries(json);
-  if (entries.length === 0) return '';
+  let lst = json;
+  if (!Array.isArray(json)) lst = [json];
+  if (lst.length === 0) return '';
   return `
     <h3 onclick="toggleHide('server-info-table-${heading}')">${heading}</h3>
     <div class="server-info-table ${cls}" id="server-info-table-${heading}">
-      <table class="table-wrap">
-        ${entries
-          .map(([key, value]) => `
-            <tr>
-              <td>${key}</td>
-              <td>${typeof value === 'object' ? JSON.stringify(value) : value}</td>
-            </tr>
-          `).join('')}
-      </table>
+      ${(lst as Record<string, unknown>[]).map((item) => {
+        const entries = Object.entries(item);
+        return `
+          <table class="table-wrap">
+            ${entries
+              .map(([key, value]) => `
+                <tr>
+                  <td>${key}</td>
+                  <td>${typeof value === 'object' ? JSON.stringify(value) : value}</td>
+                </tr>
+              `).join('')}
+          </table>
+        `;
+      }).join('')}
     </div>
   `;
 }
