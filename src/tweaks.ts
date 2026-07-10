@@ -9,7 +9,7 @@ export async function applyTweaks(): Promise<void> {
 
   async function setOrientation(mode: string): Promise<void> {
     if (!mode) mode = 'auto';
-    log('setPanelOrientation', mode);
+    log('setPanelOrientation', { mode });
     if (mode === 'auto') {
       if (window.innerHeight > window.innerWidth) { // device portrait mode
         controlColumnsElement.classList.add('flex-force-column');

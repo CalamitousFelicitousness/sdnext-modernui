@@ -1213,12 +1213,19 @@ async function initServerInfo() {
 var initialized = false;
 async function setupLogButtons() {
   const serverLog = document.getElementById("logMonitorData");
+  const btnServerClear = document.getElementById("btn_console_log_server_clear");
+  if (btnServerClear) {
+    btnServerClear.onclick = async (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+    };
+  }
   const btnServerWrap = document.getElementById("btn_console_log_server_wrap");
   if (btnServerWrap) {
     btnServerWrap.onclick = (evt) => {
       evt.preventDefault();
       evt.stopPropagation();
-      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === "nowrap" ? "break-spaces" : "nowrap";
+      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === "nowrap" ? "normal" : "nowrap";
     };
   }
   const clientLog = document.getElementById("logMonitorJS");
@@ -1236,8 +1243,15 @@ async function setupLogButtons() {
       evt.preventDefault();
       evt.stopPropagation();
       if (serverLog) {
-        const text = Array.from(serverLog.children).map((row) => row.textContent || "").join("\n");
-        navigator.clipboard.writeText(text).then(() => log("copyServerLog"));
+        let text = "";
+        try {
+          for (const row of serverLog.children) {
+            text += Array.from(row.children).map((cell) => cell.textContent || "").join(" ") + "\n";
+          }
+          navigator.clipboard.writeText(text).then(() => log("copyServerLog"));
+        } catch (e) {
+          error("copyServerLog", e);
+        }
       }
     };
   }
@@ -1247,12 +1261,16 @@ async function setupLogButtons() {
       evt.preventDefault();
       evt.stopPropagation();
       if (clientLog) {
-        const text = Array.from(clientLog.children).map((row) => row.textContent || "").join("\n");
-        navigator.clipboard.writeText(text).then(() => log("copyClientLog"));
+        try {
+          const text = Array.from(clientLog.children).map((row) => row.textContent || "").join("\n");
+          navigator.clipboard.writeText(text).then(() => log("copyClientLog"));
+        } catch (e) {
+          error("copyClientLog", e);
+        }
       }
     };
   }
-  if (btnServerWrap && btnClientWrap && btnServerCopy && btnClientCopy) initialized = true;
+  if (serverLog && btnServerWrap && btnClientWrap && btnServerCopy && btnClientCopy) initialized = true;
 }
 function logPrettyPrint(...args) {
   if (!initialized) setupLogButtons();
@@ -1342,14 +1360,14 @@ async function loadCurrentTemplate(data, htmlPath2) {
     const uiDisabled = Array.isArray(window.opts.ui_disabled) ? window.opts.ui_disabled : [];
     for (const disabled of uiDisabled) {
       if (currData.template.includes(disabled)) {
-        log("loadTemplate", currData.template, "disabled");
+        log("loadTemplate", { template: currData.template, status: "disabled" });
         return loadCurrentTemplate(data, htmlPath2);
       }
     }
     const uri = `${window.subpath}${htmlPath2}/templates/${currData.template}.html?${Date.now()}`;
     const response = await fetch(uri, { cache: "reload" });
     if (!response.ok) {
-      error("loadTemplate", currData.template, currData.target);
+      error("loadTemplate", { template: currData.template, target: currData.target, status: "error" });
       if (currData.target) currData.target.setAttribute("status", "error");
     } else {
       const text = await response.text();
@@ -1361,7 +1379,7 @@ async function loadCurrentTemplate(data, htmlPath2) {
         currData.target.setAttribute("status", "true");
         currData.target.append(tempDiv.firstElementChild);
       } else {
-        error("loadTemplateNoTarget", currData);
+        error("loadTemplateNoTarget", { template: currData.template, key: currData.key, status: "error" });
       }
     }
     const t1 = performance.now();
@@ -1378,7 +1396,7 @@ async function loadAllTemplates(htmlPath2, rootTemplate2, tabId2) {
       target: document.querySelector(tabId2)
     }
   ];
-  if (!data[0].target) error("LoadAllTemplates: missing target", data);
+  if (!data[0].target) error("LoadAllTemplates: missing target", { template: rootTemplate2, target: data[0].target, status: "error" });
   const t0 = performance.now();
   await loadCurrentTemplate(data, htmlPath2);
   const t1 = performance.now();
@@ -1386,7 +1404,7 @@ async function loadAllTemplates(htmlPath2, rootTemplate2, tabId2) {
   await replaceRootTemplate("#sdnext_app");
   const t2 = performance.now();
   timer("loadAllTemplates:replace", t2 - t1);
-  log("loadAllTemplates", `load=${Math.round(t1 - t0)} replace=${Math.round(t2 - t1)}`);
+  log("loadAllTemplates", { load: Math.round(t1 - t0), replace: Math.round(t2 - t1) });
 }
 
 // src/portals.ts
@@ -1428,7 +1446,7 @@ function movePortal(portalElem, tries, index, length) {
     const delay = timeout ? parseInt(timeout) : 500;
     setTimeout(() => movePortal(portalElem, tries + 1, index, length), delay);
   } else {
-    error("Element not found", { index, parent: parentSelector, id: dataSelector, el: portalElem, tgt: targetElem });
+    error("Element not found", { index, parent: parentSelector, id: dataSelector, el: portalElem, tgt: targetElem, status: "error" });
     portalElem.style.backgroundColor = "var(--color-error)";
     state.portalTotal += 1;
     rememberFailedPortal(portalElem);
@@ -1437,14 +1455,14 @@ function movePortal(portalElem, tries, index, length) {
 }
 async function loadAllPortals() {
   if (!state.appUiUx) {
-    error("loadAllPortals: appUiUx not found");
+    error("loadAllPortals: appUiUx not found", { status: "error" });
     return;
   }
   const t0 = performance.now();
   const portals = state.appUiUx.querySelectorAll(".portal");
   portals.forEach((elem, index, array) => movePortal(elem, 1, index, array.length));
   const t1 = performance.now();
-  log("loadAllPortals", `time=${Math.round(t1 - t0)} portals=${portals.length}`);
+  log("loadAllPortals", { portals: portals.length, time: Math.round(t1 - t0) });
   timer("loadAllPortals", t1 - t0);
 }
 function loadRetryPortals() {
@@ -1501,7 +1519,7 @@ async function removeStyleAssets() {
     count++;
   });
   const t1 = performance.now();
-  log("removeElements", `elements=${removedCount}/${count} stylesheets=${removedStylesheets} time=${Math.round(t1 - t0)}`);
+  log("removeElements", { removed: removedCount, total: count, stylesheets: removedStylesheets, time: Math.round(t1 - t0) });
   timer("removeElements", t1 - t0);
 }
 
@@ -1712,7 +1730,7 @@ async function applyTweaks() {
   const controlColumnsElement = controlColumns;
   async function setOrientation(mode) {
     if (!mode) mode = "auto";
-    log("setPanelOrientation", mode);
+    log("setPanelOrientation", { mode });
     if (mode === "auto") {
       if (window.innerHeight > window.innerWidth) {
         controlColumnsElement.classList.add("flex-force-column");

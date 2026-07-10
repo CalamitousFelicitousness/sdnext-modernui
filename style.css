@@ -32,11 +32,11 @@
 :root {
   --sd-primary-h: 180deg;
   --color-blue: paleturquoise;
-  --color-debug: #7F7F7F;
-  --color-error: #9E2030;
   --color-green: palegreen;
-  --color-info: #D4D4D4;
   --color-red: palevioletred;
+  --color-debug: #7F7F7F;
+  --color-error: #6B0000;
+  --color-info: cyan;
   --color-trace: #666666;
   --color-warning: #FF9900;
   --color-legacy: #AA6688;
@@ -203,6 +203,10 @@ hr {
   padding: 0 !important;
 }
 
+.full-height {
+  height: 100%;
+}
+
 .inset {
   margin: -2px;
   padding: 2px !important;
@@ -263,6 +267,10 @@ hr {
 
 .fb-40 {
   flex-basis: 32.5%;
+}
+
+.float-right {
+  float: right;
 }
 
 .min-width {
@@ -2238,7 +2246,7 @@ div#layout-3 {
 #btn_console::after {
   background-color: transparent;
   border-radius: var(--sd-border-radius);
-  color: darkred;
+  color: var(--color-debug);
   content: attr(error-count);
   font-size: 0.8em;
   padding: 0 0.5em;
@@ -3793,13 +3801,12 @@ ul {
   padding: 0 5px;
 }
 
-#logMonitorData td:first-child,
-.log-date {
-  color: #cacaca;
+#logMonitorData td:first-child, .log-date {
   display: table-cell;
-  font-size: 9px;
-  padding: 0px 10px;
+  font-size: 0.7rem;
+  padding: 0px 8px;
   white-space: nowrap;
+  color: deepskyblue;
 }
 
 .log-boolean,
@@ -3809,10 +3816,12 @@ ul {
 
 .log-object {
   color: #cfb0ff;
+  white-space: nowrap;
 }
 
 .log-string {
   color: #ffca68;
+  padding: 0 8px 0 0;
 }
 
 .log-number {
@@ -3836,6 +3845,7 @@ ul {
   font-family: monospace;
   font-size: 0.8rem;
   padding: 0;
+  padding-right: 0.5em;
 }
 
 #logMonitorData td:nth-child(3),
@@ -4684,9 +4694,9 @@ input[type="range"]::-ms-fill-upper {
 }
 
 #logMonitorData, #logMonitorJS {
-  height: 45vh !important;
-  overflow-x: auto !important;
-  overflow-y: auto !important;
+  height: stretch;
+  overflow-x: auto;
+  overflow-y: visible;
   width: 100% !important;
 }
 
@@ -5655,8 +5665,12 @@ div#changelog_result p {
 #gpu-controls {
   display: flex;
   flex-grow: 1;
-  justify-content: space-evenly;
+  justify-content: end;
   background-color: var(--sd-panel-background-color);
+}
+
+#gpuChart {
+  overflow: hidden;
 }
 
 #civitai_token textarea, #hf_token textarea, #setting_huggingface_token textarea {

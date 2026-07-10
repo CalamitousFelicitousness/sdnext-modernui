@@ -2,14 +2,24 @@ let initialized = false;
 
 async function setupLogButtons(): Promise<void> {
   const serverLog = document.getElementById('logMonitorData');
+
+  const btnServerClear = document.getElementById('btn_console_log_server_clear');
+  if (btnServerClear) {
+    btnServerClear.onclick = async (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+    };
+  }
+
   const btnServerWrap = document.getElementById('btn_console_log_server_wrap');
   if (btnServerWrap) {
     btnServerWrap.onclick = (evt) => {
       evt.preventDefault();
       evt.stopPropagation();
-      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === 'nowrap' ? 'break-spaces' : 'nowrap';
+      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === 'nowrap' ? 'normal' : 'nowrap';
     };
   }
+
   const clientLog = document.getElementById('logMonitorJS');
   const btnClientWrap = document.getElementById('btn_console_log_client_wrap');
   if (btnClientWrap) {
@@ -19,6 +29,7 @@ async function setupLogButtons(): Promise<void> {
       if (clientLog) clientLog.classList.toggle('wrap-div');
     };
   }
+
   const btnServerCopy = document.getElementById('btn_console_log_server_copy');
   if (btnServerCopy) {
     btnServerCopy.onclick = (evt) => {
@@ -26,23 +37,36 @@ async function setupLogButtons(): Promise<void> {
       evt.stopPropagation();
       if (serverLog) {
         // serverLog is tbody, we need to get the text content of each row and join them with newlines
-        const text = Array.from(serverLog.children).map((row) => row.textContent || '').join('\n');
-        navigator.clipboard.writeText(text).then(() => log('copyServerLog'));
+        let text = '';
+        try {
+          for (const row of serverLog.children) {
+            text += (Array.from(row.children).map((cell) => cell.textContent || '').join(' ')) + '\n'; // eslint-disable-line prefer-template
+          }
+          navigator.clipboard.writeText(text).then(() => log('copyServerLog'));
+        } catch (e) {
+          error('copyServerLog', e);
+        }
       }
     };
   }
+
   const btnClientCopy = document.getElementById('btn_console_log_client_copy');
   if (btnClientCopy) {
     btnClientCopy.onclick = (evt) => {
       evt.preventDefault();
       evt.stopPropagation();
       if (clientLog) {
-        const text = Array.from(clientLog.children).map((row) => row.textContent || '').join('\n');
-        navigator.clipboard.writeText(text).then(() => log('copyClientLog'));
+        try {
+          const text = Array.from(clientLog.children).map((row) => row.textContent || '').join('\n');
+          navigator.clipboard.writeText(text).then(() => log('copyClientLog'));
+        } catch (e) {
+          error('copyClientLog', e);
+        }
       }
     };
   }
-  if (btnServerWrap && btnClientWrap && btnServerCopy && btnClientCopy) initialized = true;
+
+  if (serverLog && btnServerWrap && btnClientWrap && btnServerCopy && btnClientCopy) initialized = true;
 }
 
 /* Logger setup and error overlay helpers for ModernUI. */
