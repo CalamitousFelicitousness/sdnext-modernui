@@ -3230,6 +3230,7 @@ button:hover svg {
   text-overflow: ellipsis;
   white-space: nowrap;
   border-radius: var(--sd-border-radius);
+  text-shadow: 1px 1px 2px black;
 }
 
 #resize_mode>span,
@@ -6108,7 +6109,7 @@ div#changelog_result p {
 }
 
 #control_prompts_tabitem button {
-  flex-grow: 1;
+  flex-grow: 0;
 }
 
 #control-tab-input-parent {
