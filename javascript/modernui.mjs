@@ -1697,7 +1697,14 @@ async function applyAutoHide() {
     document.querySelector("#control-template-column-input"),
     document.querySelector("#control-template-column-output"),
     document.querySelector("#img2img-template-column-input"),
-    document.querySelector("#img2img-template-column-output")
+    document.querySelector("#img2img-template-column-output"),
+    document.querySelector("#video_results_panel"),
+    document.querySelector("#layout-caption-image"),
+    document.querySelector("#layout-caption-output-answer"),
+    document.querySelector("#layout-caption-output-clip"),
+    document.querySelector("#layout-caption-output-image"),
+    document.querySelector("#extras-template-column-input"),
+    document.querySelector("#extras-template-column-output")
   ];
   panels.forEach((panel) => {
     if (panel) {

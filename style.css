@@ -5003,7 +5003,7 @@ button.image-fit {
 }
 
 #tab-gallery-status {
-  color: var(--sd-button-selected-text-color);
+  color: var(--sd-muted-color);
 }
 
 gallery-folder {
