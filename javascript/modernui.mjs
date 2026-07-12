@@ -1104,21 +1104,39 @@ async function showContributors() {
 }
 
 // src/server-info.ts
-var info = null;
 var initial = true;
-function toggleHide(name) {
-  const el = document.getElementById(name);
-  if (el) el.classList.toggle("hide");
+var refreshInterval = 5e3;
+var info = null;
+var visibility = {};
+function toggleHide(heading) {
+  const tableName = `server-info-table-${heading}`;
+  const el = document.getElementById(tableName);
+  if (el) {
+    el.classList.toggle("hide");
+    visibility[heading] = !el.classList.contains("hide");
+  }
 }
-window.toggleHide = toggleHide;
-function jsonToHtml(heading, json, cls = "") {
+function jsontoStr(json) {
   if (!json) return "";
   let lst = json;
   if (!Array.isArray(json)) lst = [json];
   if (lst.length === 0) return "";
+  return lst.map((item) => {
+    if (typeof item === "string") return item;
+    if (Array.isArray(item)) return item.join(", ");
+    const entries = Object.entries(item);
+    return entries.map(([key, value]) => `${key}: ${typeof value === "object" ? jsontoStr(value) : value}`).join(" | ");
+  }).join("<br>");
+}
+function jsonToHtml(heading, json, visible = true) {
+  if (!json) return "";
+  let lst = json;
+  if (!Array.isArray(json)) lst = [json];
+  if (lst.length === 0) return "";
+  const isVisible = visibility[heading] === void 0 ? visible : visibility[heading];
   return `
-    <h3 onclick="toggleHide('server-info-table-${heading}')">${heading}</h3>
-    <div class="server-info-table ${cls}" id="server-info-table-${heading}">
+    <h3 onclick="toggleHide('${heading}')">${heading}</h3>
+    <div class="server-info-table ${isVisible ? "" : "hide"}" id="server-info-table-${heading}">
       ${lst.map((item) => {
     const entries = Object.entries(item);
     return `
@@ -1126,7 +1144,7 @@ function jsonToHtml(heading, json, cls = "") {
             ${entries.map(([key, value]) => `
                 <tr>
                   <td>${key}</td>
-                  <td>${typeof value === "object" ? JSON.stringify(value) : value}</td>
+                  <td>${typeof value === "object" ? jsontoStr(value) : value}</td>
                 </tr>
               `).join("")}
           </table>
@@ -1135,43 +1153,83 @@ function jsonToHtml(heading, json, cls = "") {
     </div>
   `;
 }
+function updateNetworksInfo(loras) {
+  const networks = getSelectedNetworks() || {};
+  if (networks.lora) {
+    networks["lora selected"] = networks.lora;
+    delete networks.lora;
+  }
+  if (loras && loras.length > 0) {
+    networks["lora loaded"] = loras.join("<br>");
+  }
+  return networks;
+}
+function updateModelInfo(modelInfo) {
+  if (!info) info = {};
+  if (modelInfo.checkpoint) delete modelInfo.checkpoint;
+  if (modelInfo.title) delete modelInfo.title;
+  if (modelInfo.filename) delete modelInfo.filename;
+  modelInfo.selected = window.opts.sd_model_checkpoint;
+  if (modelInfo.name) {
+    modelInfo.loaded = modelInfo.name;
+    delete modelInfo.name;
+  }
+  if (window.opts.sd_unet_secondary !== "Default") {
+    modelInfo["unet primary"] = window.opts.sd_unet;
+    modelInfo["unet secondary"] = window.opts.sd_unet_secondary;
+  } else {
+    modelInfo.unet = window.opts.sd_unet;
+  }
+  modelInfo.te = window.opts.sd_text_encoder;
+  modelInfo.vae = window.opts.sd_vae;
+  info.model = modelInfo;
+}
 async function renderServerInfo() {
   if (!info) return;
   const el = document.getElementById("serverinfo");
   if (!el) return;
+  updateModelInfo(info.model);
   el.innerHTML = `
-    <div id="server-info-time">
-      ${(/* @__PURE__ */ new Date()).toLocaleString()}
+    <div id="server-info-time" class="server-info-time" onclick="getServerInfo()" title="Click to refresh server info">
+      Updated: ${(/* @__PURE__ */ new Date()).toLocaleString()}
     </div>
-    ${jsonToHtml("Version", info.version)}
     ${jsonToHtml("Model", info.model)}
+    ${jsonToHtml("LoRA", info.lora)}
+    ${jsonToHtml("Networks", info.networks)}
+    ${jsonToHtml("Version", info.version)}
     ${jsonToHtml("Torch", info.torch)}
     ${jsonToHtml("GPU", info.gpu)}
-    ${jsonToHtml("Platform", info.platform)}
-    ${jsonToHtml("Status", info.status, "hide")}
-    ${jsonToHtml("Memory", info.memory, "hide")}
-    ${jsonToHtml("Browser", info.browser, "hide")}
+    ${jsonToHtml("Platform", info.platform, false)}
+    ${jsonToHtml("Status", info.status, false)}
+    ${jsonToHtml("Memory", info.memory, false)}
+    ${jsonToHtml("Browser", info.browser, false)}
   `;
 }
 async function getServerInfo() {
-  const versionReq = await authFetch(`${window.api}/version`);
-  const torchReq = await authFetch(`${window.api}/torch`);
-  const gpuReq = await authFetch(`${window.api}/gpu`);
-  const statusReq = await authFetch(`${window.api}/status`);
-  const memoryReq = await authFetch(`${window.api}/memory`);
-  const platformReq = await authFetch(`${window.api}/platform`);
-  const modelReq = await authFetch(`${window.api}/checkpoint`);
+  const requests = [
+    authFetch(`${window.api}/version`),
+    authFetch(`${window.api}/checkpoint`),
+    authFetch(`${window.api}/loaded-loras`),
+    authFetch(`${window.api}/torch`),
+    authFetch(`${window.api}/gpu`),
+    authFetch(`${window.api}/status`),
+    authFetch(`${window.api}/memory`),
+    authFetch(`${window.api}/platform`)
+  ];
+  const responses = await Promise.all(requests);
   info = {
-    version: versionReq.ok ? await versionReq.json() : {},
-    model: modelReq.ok ? await modelReq.json() : {},
-    torch: torchReq.ok ? await torchReq.json() : {},
-    gpu: gpuReq.ok ? await gpuReq.json() : {},
-    status: statusReq.ok ? await statusReq.json() : {},
-    memory: memoryReq.ok ? await memoryReq.json() : {},
-    platform: platformReq.ok ? await platformReq.json() : {},
+    version: responses[0]?.ok ? await responses[0].json() : {},
+    model: responses[1]?.ok ? await responses[1].json() : {},
+    networks: updateNetworksInfo(responses[2]?.ok ? await responses[2].json() : []),
+    torch: responses[3]?.ok ? await responses[3].json() : {},
+    gpu: responses[4]?.ok ? await responses[4].json() : {},
+    status: responses[5]?.ok ? await responses[5].json() : {},
+    memory: responses[6]?.ok ? await responses[6].json() : {},
+    platform: responses[7]?.ok ? await responses[7].json() : {},
     browser: { agent: navigator.userAgent }
   };
   if (initial) log("getServerInfo", info);
+  initial = false;
   renderServerInfo();
 }
 async function initServerInfo() {
@@ -1182,8 +1240,7 @@ async function initServerInfo() {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
         if (initial) getServerInfo();
-        if (!refreshTimer) refreshTimer = setInterval(getServerInfo, 1e4);
-        initial = false;
+        if (!refreshTimer) refreshTimer = setInterval(getServerInfo, refreshInterval);
       } else {
         if (refreshTimer) clearInterval(refreshTimer);
         refreshTimer = null;
@@ -1208,6 +1265,8 @@ async function initServerInfo() {
     log("infoCopy", infoToCopy);
   });
 }
+window.toggleHide = toggleHide;
+window.getServerInfo = getServerInfo;
 
 // src/logger.ts
 var initialized = false;

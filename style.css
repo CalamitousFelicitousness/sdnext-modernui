@@ -6147,26 +6147,27 @@ input.border-none.subdued {
 }
 
 .server-info-table {
-  max-height: 12em;
+  max-height: 16em;
   overflow-y: auto;
   overflow-x: hidden;
-  font-size: 0.9em;
   margin-left: 1em;
 }
 
 .server-info-table tbody tr td {
-  text-wrap-mode: nowrap;
+  text-wrap-mode: wrap;
 }
 
 .server-info-table tbody tr td:first-child {
   font-weight: bold;
   font-variant: small-caps;
   width: 7em;
+  align-content: start;
 }
 
 #server-info-time {
   text-align: right;
   color: var(--sd-button-hover-color);
+  cursor: pointer;
 }
 
 .legacy {

@@ -1,23 +1,40 @@
 /* Server info fetch/render utilities and inline toggle helpers. */
-let info: Record<string, unknown> | null = null;
 let initial = true;
+const refreshInterval = 5000;
+let info: Record<string, unknown> | null = null;
+const visibility: Record<string, boolean> = {};
 
-function toggleHide(name: string): void {
-  const el = document.getElementById(name);
-  if (el) el.classList.toggle('hide');
+function toggleHide(heading: string): void {
+  const tableName = `server-info-table-${heading}`;
+  const el = document.getElementById(tableName);
+  if (el) {
+    el.classList.toggle('hide');
+    visibility[heading] = !el.classList.contains('hide');
+  }
 }
 
-// Expose toggleHide globally for inline onclick handlers in dynamically rendered HTML
-window.toggleHide = toggleHide;
-
-function jsonToHtml(heading: string, json: Record<string, unknown> | Record<string, unknown>[] | null | undefined, cls = ''): string {
+function jsontoStr(json: Record<string, unknown> | Record<string, unknown>[] | null | undefined): string {
   if (!json) return '';
   let lst = json;
   if (!Array.isArray(json)) lst = [json];
   if (lst.length === 0) return '';
+  return (lst as Record<string, unknown>[]).map((item) => {
+    if (typeof item === 'string') return item;
+    if (Array.isArray(item)) return item.join(', ');
+    const entries = Object.entries(item);
+    return entries.map(([key, value]) => `${key}: ${typeof value === 'object' ? jsontoStr(value as Record<string, unknown>) : value}`).join(' | ');
+  }).join('<br>');
+}
+
+function jsonToHtml(heading: string, json: Record<string, unknown> | Record<string, unknown>[] | null | undefined, visible = true): string {
+  if (!json) return '';
+  let lst = json;
+  if (!Array.isArray(json)) lst = [json];
+  if (lst.length === 0) return '';
+  const isVisible = visibility[heading] === undefined ? visible : visibility[heading];
   return `
-    <h3 onclick="toggleHide('server-info-table-${heading}')">${heading}</h3>
-    <div class="server-info-table ${cls}" id="server-info-table-${heading}">
+    <h3 onclick="toggleHide('${heading}')">${heading}</h3>
+    <div class="server-info-table ${isVisible ? '' : 'hide'}" id="server-info-table-${heading}">
       ${(lst as Record<string, unknown>[]).map((item) => {
         const entries = Object.entries(item);
         return `
@@ -26,7 +43,7 @@ function jsonToHtml(heading: string, json: Record<string, unknown> | Record<stri
               .map(([key, value]) => `
                 <tr>
                   <td>${key}</td>
-                  <td>${typeof value === 'object' ? JSON.stringify(value) : value}</td>
+                  <td>${typeof value === 'object' ? jsontoStr(value as Record<string, unknown>) : value}</td>
                 </tr>
               `).join('')}
           </table>
@@ -36,44 +53,86 @@ function jsonToHtml(heading: string, json: Record<string, unknown> | Record<stri
   `;
 }
 
+function updateNetworksInfo(loras: string[] | null): Record<string, unknown> {
+  const networks: Record<string, unknown> = getSelectedNetworks() || {};
+  if (networks.lora) {
+    networks['lora selected'] = networks.lora;
+    delete networks.lora;
+  }
+  if (loras && loras.length > 0) {
+    networks['lora loaded'] = loras.join('<br>');
+  }
+  return networks;
+}
+
+function updateModelInfo(modelInfo: Record<string, unknown>): void {
+  if (!info) info = {};
+  if (modelInfo.checkpoint) delete modelInfo.checkpoint;
+  if (modelInfo.title) delete modelInfo.title;
+  if (modelInfo.filename) delete modelInfo.filename;
+  modelInfo.selected = window.opts.sd_model_checkpoint;
+  if (modelInfo.name) {
+    modelInfo.loaded = modelInfo.name;
+    delete modelInfo.name;
+  }
+  if (window.opts.sd_unet_secondary !== 'Default') {
+    modelInfo['unet primary'] = window.opts.sd_unet;
+    modelInfo['unet secondary'] = window.opts.sd_unet_secondary;
+  } else {
+    modelInfo.unet = window.opts.sd_unet;
+  }
+  modelInfo.te = window.opts.sd_text_encoder;
+  modelInfo.vae = window.opts.sd_vae;
+  info.model = modelInfo;
+}
+
 async function renderServerInfo(): Promise<void> {
   if (!info) return;
   const el = document.getElementById('serverinfo');
   if (!el) return;
+  updateModelInfo(info.model as Record<string, unknown>);
   el.innerHTML = `
-    <div id="server-info-time">
-      ${new Date().toLocaleString()}
+    <div id="server-info-time" class="server-info-time" onclick="getServerInfo()" title="Click to refresh server info">
+      Updated: ${new Date().toLocaleString()}
     </div>
-    ${jsonToHtml('Version', info.version as Record<string, unknown>)}
     ${jsonToHtml('Model', info.model as Record<string, unknown>)}
+    ${jsonToHtml('LoRA', info.lora as Record<string, unknown>)}
+    ${jsonToHtml('Networks', info.networks as Record<string, unknown>)}
+    ${jsonToHtml('Version', info.version as Record<string, unknown>)}
     ${jsonToHtml('Torch', info.torch as Record<string, unknown>)}
     ${jsonToHtml('GPU', info.gpu as Record<string, unknown>)}
-    ${jsonToHtml('Platform', info.platform as Record<string, unknown>)}
-    ${jsonToHtml('Status', info.status as Record<string, unknown>, 'hide')}
-    ${jsonToHtml('Memory', info.memory as Record<string, unknown>, 'hide')}
-    ${jsonToHtml('Browser', info.browser as Record<string, unknown>, 'hide')}
+    ${jsonToHtml('Platform', info.platform as Record<string, unknown>, false)}
+    ${jsonToHtml('Status', info.status as Record<string, unknown>, false)}
+    ${jsonToHtml('Memory', info.memory as Record<string, unknown>, false)}
+    ${jsonToHtml('Browser', info.browser as Record<string, unknown>, false)}
   `;
 }
 
 async function getServerInfo(): Promise<void> {
-  const versionReq = await authFetch(`${window.api}/version`);
-  const torchReq = await authFetch(`${window.api}/torch`);
-  const gpuReq = await authFetch(`${window.api}/gpu`);
-  const statusReq = await authFetch(`${window.api}/status`);
-  const memoryReq = await authFetch(`${window.api}/memory`);
-  const platformReq = await authFetch(`${window.api}/platform`);
-  const modelReq = await authFetch(`${window.api}/checkpoint`);
+  const requests = [
+    authFetch(`${window.api}/version`),
+    authFetch(`${window.api}/checkpoint`),
+    authFetch(`${window.api}/loaded-loras`),
+    authFetch(`${window.api}/torch`),
+    authFetch(`${window.api}/gpu`),
+    authFetch(`${window.api}/status`),
+    authFetch(`${window.api}/memory`),
+    authFetch(`${window.api}/platform`),
+  ];
+  const responses = await Promise.all(requests);
   info = {
-    version: versionReq.ok ? await versionReq.json() : {},
-    model: modelReq.ok ? await modelReq.json() : {},
-    torch: torchReq.ok ? await torchReq.json() : {},
-    gpu: gpuReq.ok ? await gpuReq.json() : {},
-    status: statusReq.ok ? await statusReq.json() : {},
-    memory: memoryReq.ok ? await memoryReq.json() : {},
-    platform: platformReq.ok ? await platformReq.json() : {},
+    version: responses[0]?.ok ? await responses[0].json() : {},
+    model: responses[1]?.ok ? await responses[1].json() : {},
+    networks: updateNetworksInfo(responses[2]?.ok ? await responses[2].json() : []),
+    torch: responses[3]?.ok ? await responses[3].json() : {},
+    gpu: responses[4]?.ok ? await responses[4].json() : {},
+    status: responses[5]?.ok ? await responses[5].json() : {},
+    memory: responses[6]?.ok ? await responses[6].json() : {},
+    platform: responses[7]?.ok ? await responses[7].json() : {},
     browser: { agent: navigator.userAgent },
   };
   if (initial) log('getServerInfo', info);
+  initial = false;
   renderServerInfo();
 }
 
@@ -85,8 +144,7 @@ export async function initServerInfo(): Promise<void> {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
         if (initial) getServerInfo();
-        if (!refreshTimer) refreshTimer = setInterval(getServerInfo, 10000);
-        initial = false;
+        if (!refreshTimer) refreshTimer = setInterval(getServerInfo, refreshInterval);
       } else {
         if (refreshTimer) clearInterval(refreshTimer);
         refreshTimer = null;
@@ -112,3 +170,7 @@ export async function initServerInfo(): Promise<void> {
     log('infoCopy', infoToCopy);
   });
 }
+
+// Expose toggleHide globally for inline onclick handlers in dynamically rendered HTML
+window.toggleHide = toggleHide;
+window.getServerInfo = getServerInfo;
