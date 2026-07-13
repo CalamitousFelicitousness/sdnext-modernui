@@ -4979,6 +4979,10 @@ button.image-fit {
   display: none;
 }
 
+gallery-file {
+  display: flex;
+}
+
 #tab-gallery-folders,
 #tab-gallery-files {
   display: flex;
@@ -4994,6 +4998,7 @@ button.image-fit {
 #tab-gallery-files {
   background-color: var(--sd-input-background-color);
   justify-content: space-evenly;
+  border-radius: var(--sd-border-radius);
 }
 
 #tab-gallery-sort-buttons {
