@@ -1188,9 +1188,9 @@ function updateModelInfo(modelInfo) {
 }
 function updateVersionInfo(versionInfo) {
   if (!info) info = {};
-  versionInfo.version = `${info.version.updated || "Unknown"} ${info.version.commit || ""}`;
-  versionInfo.url = `<a href="${info.version.url || "#"}" target="_blank">${info.version.url || "Unknown"}</a>`;
-  versionInfo.branch = `Core: ${info.version.branch || "Unknown"} | UI: ${info.version.ui || "Unknown"} | Kanvas: ${info.version.kanvas || "Unknown"}`;
+  versionInfo.version = `${versionInfo.updated || "Unknown"} ${versionInfo.commit || ""}`;
+  versionInfo.url = `<a href="${versionInfo.url || "#"}" target="_blank">${versionInfo.url || "Unknown"}</a>`;
+  versionInfo.branch = `Core: ${versionInfo.branch || "Unknown"} | UI: ${versionInfo.ui || "Unknown"} | Kanvas: ${versionInfo.kanvas || "Unknown"}`;
   if (versionInfo.kanvas) delete versionInfo.kanvas;
   if (versionInfo.ui) delete versionInfo.ui;
   if (versionInfo.commit) delete versionInfo.commit;
