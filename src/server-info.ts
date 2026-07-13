@@ -67,6 +67,8 @@ function updateNetworksInfo(loras: string[] | null): Record<string, unknown> {
 
 function updateModelInfo(modelInfo: Record<string, unknown>): void {
   if (!info) info = {};
+  if (modelInfo.class === null) delete modelInfo.class;
+  if (modelInfo.type === null) modelInfo.type = 'Not loaded';
   if (modelInfo.checkpoint) delete modelInfo.checkpoint;
   if (modelInfo.title) delete modelInfo.title;
   if (modelInfo.filename) delete modelInfo.filename;
@@ -86,11 +88,24 @@ function updateModelInfo(modelInfo: Record<string, unknown>): void {
   info.model = modelInfo;
 }
 
+function updateVersionInfo(versionInfo: Record<string, unknown>): void {
+  if (!info) info = {};
+  versionInfo.version = `${info.version.updated || 'Unknown'} ${info.version.commit || ''}`;
+  versionInfo.url = `<a href="${info.version.url || '#'}" target="_blank">${info.version.url || 'Unknown'}</a>`;
+  versionInfo.branch = `Core: ${info.version.branch || 'Unknown'} | UI: ${info.version.ui || 'Unknown'} | Kanvas: ${info.version.kanvas || 'Unknown'}`;
+  if (versionInfo.kanvas) delete versionInfo.kanvas;
+  if (versionInfo.ui) delete versionInfo.ui;
+  if (versionInfo.commit) delete versionInfo.commit;
+  if (versionInfo.updated) delete versionInfo.updated;
+  info.version = versionInfo;
+}
+
 async function renderServerInfo(): Promise<void> {
   if (!info) return;
   const el = document.getElementById('serverinfo');
   if (!el) return;
   updateModelInfo(info.model as Record<string, unknown>);
+  updateVersionInfo(info.version as Record<string, unknown>);
   el.innerHTML = `
     <div id="server-info-time" class="server-info-time" onclick="getServerInfo()" title="Click to refresh server info">
       Updated: ${new Date().toLocaleString()}
@@ -99,8 +114,8 @@ async function renderServerInfo(): Promise<void> {
     ${jsonToHtml('LoRA', info.lora as Record<string, unknown>)}
     ${jsonToHtml('Networks', info.networks as Record<string, unknown>)}
     ${jsonToHtml('Version', info.version as Record<string, unknown>)}
-    ${jsonToHtml('Torch', info.torch as Record<string, unknown>)}
-    ${jsonToHtml('GPU', info.gpu as Record<string, unknown>)}
+    ${jsonToHtml('Torch', info.torch as Record<string, unknown>, false)}
+    ${jsonToHtml('GPU', info.gpu as Record<string, unknown>, false)}
     ${jsonToHtml('Platform', info.platform as Record<string, unknown>, false)}
     ${jsonToHtml('Status', info.status as Record<string, unknown>, false)}
     ${jsonToHtml('Memory', info.memory as Record<string, unknown>, false)}

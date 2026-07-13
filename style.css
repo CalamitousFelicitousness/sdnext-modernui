@@ -61,7 +61,7 @@
   --sd-input-border-color: rgba(0, 0, 0, 0.1);
   --sd-input-border-size: 2px;
   --sd-input-font-size: var(--font-size);
-  --sd-input-height: 35px;
+  --sd-input-height: 32px;
   --sd-input-hover-text-color: var(--sd-input-text-color);
   --sd-input-icon-height: calc(var(--sd-input-height) - var(--sd-input-border-size) * 2);
   --sd-input-line-height: 23px;
@@ -1738,8 +1738,8 @@ li.item span {
   justify-content: center;
   line-height: var(--sd-input-line-height);
   margin: 0;
-  min-height: var(--sd-input-height);
-  min-width: var(--sd-input-height);
+  min-height: calc(1.2 * var(--sd-input-height));
+  min-width: calc(1.2 * var(--sd-input-height));
   padding: var(--sd-input-padding);
   background: var(--sd-button-normal-color);
   color: var(--sd-button-normal-text-color);
@@ -1805,6 +1805,13 @@ li.item span {
 .full-height {
   height: 100% !important;
   resize: none;
+}
+
+#main-nav button {
+  min-width: 3.1rem;
+  max-width: 3.1rem;
+  min-height: 3.1rem;
+  max-height: 3.1rem;
 }
 
 h1 {
@@ -6110,6 +6117,7 @@ div#changelog_result p {
 
 #control_prompts_tabitem button {
   flex-grow: 0;
+  min-height: 2rem;
 }
 
 #control-tab-input-parent {

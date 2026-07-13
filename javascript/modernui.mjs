@@ -1166,6 +1166,8 @@ function updateNetworksInfo(loras) {
 }
 function updateModelInfo(modelInfo) {
   if (!info) info = {};
+  if (modelInfo.class === null) delete modelInfo.class;
+  if (modelInfo.type === null) modelInfo.type = "Not loaded";
   if (modelInfo.checkpoint) delete modelInfo.checkpoint;
   if (modelInfo.title) delete modelInfo.title;
   if (modelInfo.filename) delete modelInfo.filename;
@@ -1184,11 +1186,23 @@ function updateModelInfo(modelInfo) {
   modelInfo.vae = window.opts.sd_vae;
   info.model = modelInfo;
 }
+function updateVersionInfo(versionInfo) {
+  if (!info) info = {};
+  versionInfo.version = `${info.version.updated || "Unknown"} ${info.version.commit || ""}`;
+  versionInfo.url = `<a href="${info.version.url || "#"}" target="_blank">${info.version.url || "Unknown"}</a>`;
+  versionInfo.branch = `Core: ${info.version.branch || "Unknown"} | UI: ${info.version.ui || "Unknown"} | Kanvas: ${info.version.kanvas || "Unknown"}`;
+  if (versionInfo.kanvas) delete versionInfo.kanvas;
+  if (versionInfo.ui) delete versionInfo.ui;
+  if (versionInfo.commit) delete versionInfo.commit;
+  if (versionInfo.updated) delete versionInfo.updated;
+  info.version = versionInfo;
+}
 async function renderServerInfo() {
   if (!info) return;
   const el = document.getElementById("serverinfo");
   if (!el) return;
   updateModelInfo(info.model);
+  updateVersionInfo(info.version);
   el.innerHTML = `
     <div id="server-info-time" class="server-info-time" onclick="getServerInfo()" title="Click to refresh server info">
       Updated: ${(/* @__PURE__ */ new Date()).toLocaleString()}
@@ -1197,8 +1211,8 @@ async function renderServerInfo() {
     ${jsonToHtml("LoRA", info.lora)}
     ${jsonToHtml("Networks", info.networks)}
     ${jsonToHtml("Version", info.version)}
-    ${jsonToHtml("Torch", info.torch)}
-    ${jsonToHtml("GPU", info.gpu)}
+    ${jsonToHtml("Torch", info.torch, false)}
+    ${jsonToHtml("GPU", info.gpu, false)}
     ${jsonToHtml("Platform", info.platform, false)}
     ${jsonToHtml("Status", info.status, false)}
     ${jsonToHtml("Memory", info.memory, false)}
