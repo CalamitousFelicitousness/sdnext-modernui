@@ -6120,6 +6120,10 @@ div#changelog_result p {
   min-height: 2rem;
 }
 
+#control_output_group button {
+  min-height: unset;
+}
+
 #control-tab-input-parent {
   width: 100%;
   height:100%;
