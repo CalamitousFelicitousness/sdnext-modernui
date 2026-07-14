@@ -41,7 +41,7 @@ function movePortal(portalElem: Element, tries: number, index: number, length: n
     const delay = timeout ? parseInt(timeout) : 500;
     setTimeout(() => movePortal(portalElem, tries + 1, index, length), delay);
   } else {
-    error('Element not found', { index, parent: parentSelector, id: dataSelector, el: portalElem, tgt: targetElem });
+    error('Element not found', { index, parent: parentSelector, id: dataSelector, el: portalElem, tgt: targetElem, status: 'error' });
     (portalElem as HTMLElement).style.backgroundColor = 'var(--color-error)';
     state.portalTotal += 1;
     rememberFailedPortal(portalElem);
@@ -52,7 +52,7 @@ function movePortal(portalElem: Element, tries: number, index: number, length: n
 
 export async function loadAllPortals(): Promise<void> {
   if (!state.appUiUx) {
-    error('loadAllPortals: appUiUx not found');
+    error('loadAllPortals: appUiUx not found', { status: 'error' });
     return;
   }
 
@@ -60,7 +60,7 @@ export async function loadAllPortals(): Promise<void> {
   const portals = state.appUiUx.querySelectorAll('.portal');
   portals.forEach((elem, index, array) => movePortal(elem, 1, index, array.length));
   const t1 = performance.now();
-  log('loadAllPortals', `time=${Math.round(t1 - t0)} portals=${portals.length}`);
+  log('loadAllPortals', { portals: portals.length, time: Math.round(t1 - t0) });
   timer('loadAllPortals', t1 - t0);
 }
 

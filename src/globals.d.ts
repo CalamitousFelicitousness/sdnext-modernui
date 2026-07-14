@@ -5,9 +5,10 @@ declare function log(...args: unknown[]): void;
 declare function error(...args: unknown[]): void;
 declare function debug(...args: unknown[]): void;
 declare function timer(name: string, duration: number): void;
-declare function generateForever(id: string): void;
 declare function onUiReady(fn: () => Promise<void> | void): void;
 declare function authFetch(url: string, options?: RequestInit): Promise<Response>;
+declare function generateForever(id: string): void;
+declare function getSelectedNetworks(): Record<string, unknown> | null;
 
 interface Window {
   opts: Record<string, unknown>; // options object
@@ -16,7 +17,9 @@ interface Window {
   logger: HTMLElement | null; // global logger element
   logPrettyPrint?: (...args: unknown[]) => string;
   waitForUiReady: () => Promise<void>;
+  toggleHide: (name: string) => void;
   getUICurrentTabContent: () => Element | null;
   getSettingsTabs: () => NodeListOf<Element>;
-  toggleHide: (name: string) => void;
+  getServerInfo: () => Promise<void>;
+  getSelectedNetworks: () => Record<string, unknown> | null;
 }

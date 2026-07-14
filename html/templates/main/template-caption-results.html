@@ -1,5 +1,5 @@
 <div class="layout">
-  <div class="flexbox col">
+  <div id="layout-caption-results" class="flexbox col">
 
     <div class="layout-header">
       <div class="flexbox row shrink panel padding no-br">
@@ -11,7 +11,7 @@
 
     <div id="split-caption-output" class="split" direction="vertical" gutterSize="8">
       <div id="split-caption-output-answer" class="split-container" data-initSize="50" data-minSize="50">
-        <div class="layout">
+        <div class="layout" id="layout-caption-output-answer">
           <div class="layout-header">
             <div class="flexbox row shrink panel padding no-br">
               <h3>Answer</h3>
@@ -26,7 +26,7 @@
       <div id="split-caption-output-conditional" class="split-container" data-initSize="50" data-minSize="100">
         <div class="xtabs-anchor" anchorNav="#mode_caption > .tab-nav">
           <div anchor="2" id="split-caption-output-clip">
-            <div class="layout">
+            <div class="layout" id="layout-caption-output-clip">
               <div class="layout-header">
                 <div class="flexbox row shrink panel padding no-br">
                   <h3>CLIP Analysis</h3>
@@ -39,7 +39,7 @@
           </div>
 
           <div anchor="1" id="split-caption-output-image">
-            <div class="layout">
+            <div class="layout" id="layout-caption-output-image">
               <div class="layout-header">
                 <div class="flexbox row shrink panel padding no-br">
                   <h3>Image</h3>

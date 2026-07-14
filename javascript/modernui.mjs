@@ -1104,68 +1104,146 @@ async function showContributors() {
 }
 
 // src/server-info.ts
-var info = null;
 var initial = true;
-function toggleHide(name) {
-  const el = document.getElementById(name);
-  if (el) el.classList.toggle("hide");
+var refreshInterval = 5e3;
+var info = null;
+var visibility = {};
+function toggleHide(heading) {
+  const tableName = `server-info-table-${heading}`;
+  const el = document.getElementById(tableName);
+  if (el) {
+    el.classList.toggle("hide");
+    visibility[heading] = !el.classList.contains("hide");
+  }
 }
-window.toggleHide = toggleHide;
-function jsonToHtml(heading, json, cls = "") {
+function jsontoStr(json) {
   if (!json) return "";
-  const entries = Object.entries(json);
-  if (entries.length === 0) return "";
+  let lst = json;
+  if (!Array.isArray(json)) lst = [json];
+  if (lst.length === 0) return "";
+  return lst.map((item) => {
+    if (typeof item === "string") return item;
+    if (Array.isArray(item)) return item.join(", ");
+    const entries = Object.entries(item);
+    return entries.map(([key, value]) => `${key}: ${typeof value === "object" ? jsontoStr(value) : value}`).join(" | ");
+  }).join("<br>");
+}
+function jsonToHtml(heading, json, visible = true) {
+  if (!json) return "";
+  let lst = json;
+  if (!Array.isArray(json)) lst = [json];
+  if (lst.length === 0) return "";
+  const isVisible = visibility[heading] === void 0 ? visible : visibility[heading];
   return `
-    <h3 onclick="toggleHide('server-info-table-${heading}')">${heading}</h3>
-    <div class="server-info-table ${cls}" id="server-info-table-${heading}">
-      <table class="table-wrap">
-        ${entries.map(([key, value]) => `
-            <tr>
-              <td>${key}</td>
-              <td>${typeof value === "object" ? JSON.stringify(value) : value}</td>
-            </tr>
-          `).join("")}
-      </table>
+    <h3 onclick="toggleHide('${heading}')">${heading}</h3>
+    <div class="server-info-table ${isVisible ? "" : "hide"}" id="server-info-table-${heading}">
+      ${lst.map((item) => {
+    const entries = Object.entries(item);
+    return `
+          <table class="table-wrap">
+            ${entries.map(([key, value]) => `
+                <tr>
+                  <td>${key}</td>
+                  <td>${typeof value === "object" ? jsontoStr(value) : value}</td>
+                </tr>
+              `).join("")}
+          </table>
+        `;
+  }).join("")}
     </div>
   `;
+}
+function updateNetworksInfo(loras) {
+  const networks = getSelectedNetworks() || {};
+  if (networks.lora) {
+    networks["lora selected"] = networks.lora;
+    delete networks.lora;
+  }
+  if (loras && loras.length > 0) {
+    networks["lora loaded"] = loras.join("<br>");
+  }
+  return networks;
+}
+function updateModelInfo(modelInfo) {
+  if (!info) info = {};
+  if (modelInfo.class === null) delete modelInfo.class;
+  if (modelInfo.type === null) modelInfo.type = "Not loaded";
+  if (modelInfo.checkpoint) delete modelInfo.checkpoint;
+  if (modelInfo.title) delete modelInfo.title;
+  if (modelInfo.filename) delete modelInfo.filename;
+  modelInfo.selected = window.opts.sd_model_checkpoint;
+  if (modelInfo.name) {
+    modelInfo.loaded = modelInfo.name;
+    delete modelInfo.name;
+  }
+  if (window.opts.sd_unet_secondary !== "Default") {
+    modelInfo["unet primary"] = window.opts.sd_unet;
+    modelInfo["unet secondary"] = window.opts.sd_unet_secondary;
+  } else {
+    modelInfo.unet = window.opts.sd_unet;
+  }
+  modelInfo.te = window.opts.sd_text_encoder;
+  modelInfo.vae = window.opts.sd_vae;
+  info.model = modelInfo;
+}
+function updateVersionInfo(versionInfo) {
+  if (!info) info = {};
+  versionInfo.version = `${versionInfo.updated || "Unknown"} ${versionInfo.commit || ""}`;
+  versionInfo.url = `<a href="${versionInfo.url || "#"}" target="_blank">${versionInfo.url || "Unknown"}</a>`;
+  versionInfo.branch = `Core: ${versionInfo.branch || "Unknown"} | UI: ${versionInfo.ui || "Unknown"} | Kanvas: ${versionInfo.kanvas || "Unknown"}`;
+  if (versionInfo.kanvas) delete versionInfo.kanvas;
+  if (versionInfo.ui) delete versionInfo.ui;
+  if (versionInfo.commit) delete versionInfo.commit;
+  if (versionInfo.updated) delete versionInfo.updated;
+  info.version = versionInfo;
 }
 async function renderServerInfo() {
   if (!info) return;
   const el = document.getElementById("serverinfo");
   if (!el) return;
+  updateModelInfo(info.model);
+  updateVersionInfo(info.version);
   el.innerHTML = `
-    <div id="server-info-time">
-      ${(/* @__PURE__ */ new Date()).toLocaleString()}
+    <div id="server-info-time" class="server-info-time" onclick="getServerInfo()" title="Click to refresh server info">
+      Updated: ${(/* @__PURE__ */ new Date()).toLocaleString()}
     </div>
-    ${jsonToHtml("Version", info.version)}
     ${jsonToHtml("Model", info.model)}
-    ${jsonToHtml("Torch", info.torch)}
-    ${jsonToHtml("GPU", info.gpu)}
-    ${jsonToHtml("Platform", info.platform)}
-    ${jsonToHtml("Status", info.status, "hide")}
-    ${jsonToHtml("Memory", info.memory, "hide")}
-    ${jsonToHtml("Browser", info.browser, "hide")}
+    ${jsonToHtml("LoRA", info.lora)}
+    ${jsonToHtml("Networks", info.networks)}
+    ${jsonToHtml("Version", info.version)}
+    ${jsonToHtml("Torch", info.torch, false)}
+    ${jsonToHtml("GPU", info.gpu, false)}
+    ${jsonToHtml("Platform", info.platform, false)}
+    ${jsonToHtml("Status", info.status, false)}
+    ${jsonToHtml("Memory", info.memory, false)}
+    ${jsonToHtml("Browser", info.browser, false)}
   `;
 }
 async function getServerInfo() {
-  const versionReq = await authFetch(`${window.api}/version`);
-  const torchReq = await authFetch(`${window.api}/torch`);
-  const gpuReq = await authFetch(`${window.api}/gpu`);
-  const statusReq = await authFetch(`${window.api}/status`);
-  const memoryReq = await authFetch(`${window.api}/memory`);
-  const platformReq = await authFetch(`${window.api}/platform`);
-  const modelReq = await authFetch(`${window.api}/checkpoint`);
+  const requests = [
+    authFetch(`${window.api}/version`),
+    authFetch(`${window.api}/checkpoint`),
+    authFetch(`${window.api}/loaded-loras`),
+    authFetch(`${window.api}/torch`),
+    authFetch(`${window.api}/gpu`),
+    authFetch(`${window.api}/status`),
+    authFetch(`${window.api}/memory`),
+    authFetch(`${window.api}/platform`)
+  ];
+  const responses = await Promise.all(requests);
   info = {
-    version: versionReq.ok ? await versionReq.json() : {},
-    model: modelReq.ok ? await modelReq.json() : {},
-    torch: torchReq.ok ? await torchReq.json() : {},
-    gpu: gpuReq.ok ? await gpuReq.json() : {},
-    status: statusReq.ok ? await statusReq.json() : {},
-    memory: memoryReq.ok ? await memoryReq.json() : {},
-    platform: platformReq.ok ? await platformReq.json() : {},
+    version: responses[0]?.ok ? await responses[0].json() : {},
+    model: responses[1]?.ok ? await responses[1].json() : {},
+    networks: updateNetworksInfo(responses[2]?.ok ? await responses[2].json() : []),
+    torch: responses[3]?.ok ? await responses[3].json() : {},
+    gpu: responses[4]?.ok ? await responses[4].json() : {},
+    status: responses[5]?.ok ? await responses[5].json() : {},
+    memory: responses[6]?.ok ? await responses[6].json() : {},
+    platform: responses[7]?.ok ? await responses[7].json() : {},
     browser: { agent: navigator.userAgent }
   };
   if (initial) log("getServerInfo", info);
+  initial = false;
   renderServerInfo();
 }
 async function initServerInfo() {
@@ -1176,8 +1254,7 @@ async function initServerInfo() {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
         if (initial) getServerInfo();
-        if (!refreshTimer) refreshTimer = setInterval(getServerInfo, 1e4);
-        initial = false;
+        if (!refreshTimer) refreshTimer = setInterval(getServerInfo, refreshInterval);
       } else {
         if (refreshTimer) clearInterval(refreshTimer);
         refreshTimer = null;
@@ -1202,14 +1279,79 @@ async function initServerInfo() {
     log("infoCopy", infoToCopy);
   });
 }
+window.toggleHide = toggleHide;
+window.getServerInfo = getServerInfo;
 
 // src/logger.ts
+var initialized = false;
+async function setupLogButtons() {
+  const serverLog = document.getElementById("logMonitorData");
+  const btnServerClear = document.getElementById("btn_console_log_server_clear");
+  if (btnServerClear) {
+    btnServerClear.onclick = async (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+    };
+  }
+  const btnServerWrap = document.getElementById("btn_console_log_server_wrap");
+  if (btnServerWrap) {
+    btnServerWrap.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === "nowrap" ? "normal" : "nowrap";
+    };
+  }
+  const clientLog = document.getElementById("logMonitorJS");
+  const btnClientWrap = document.getElementById("btn_console_log_client_wrap");
+  if (btnClientWrap) {
+    btnClientWrap.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (clientLog) clientLog.classList.toggle("wrap-div");
+    };
+  }
+  const btnServerCopy = document.getElementById("btn_console_log_server_copy");
+  if (btnServerCopy) {
+    btnServerCopy.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (serverLog) {
+        let text = "";
+        try {
+          for (const row of serverLog.children) {
+            text += Array.from(row.children).map((cell) => cell.textContent || "").join(" ") + "\n";
+          }
+          navigator.clipboard.writeText(text).then(() => log("copyServerLog"));
+        } catch (e) {
+          error("copyServerLog", e);
+        }
+      }
+    };
+  }
+  const btnClientCopy = document.getElementById("btn_console_log_client_copy");
+  if (btnClientCopy) {
+    btnClientCopy.onclick = (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (clientLog) {
+        try {
+          const text = Array.from(clientLog.children).map((row) => row.textContent || "").join("\n");
+          navigator.clipboard.writeText(text).then(() => log("copyClientLog"));
+        } catch (e) {
+          error("copyClientLog", e);
+        }
+      }
+    };
+  }
+  if (serverLog && btnServerWrap && btnClientWrap && btnServerCopy && btnClientCopy) initialized = true;
+}
 function logPrettyPrint(...args) {
+  if (!initialized) setupLogButtons();
   let output = "";
   const dt = /* @__PURE__ */ new Date();
   const [h, m, s, ms] = [dt.getHours().toString(), dt.getMinutes().toString(), dt.getSeconds().toString(), dt.getMilliseconds().toString()];
   const ts = `${h.padStart(2, "0")}:${m.padStart(2, "0")}:${s.padStart(2, "0")}.${ms.padStart(3, "0")}`;
-  output += `<div class="log-row"><span class="log-date">${ts}</span>`;
+  output += `<div class="log-row"><span class="log-date">${ts}</span> `;
   for (let i = 0; i < args.length; i++) {
     let arg = args[i];
     if (arg === void 0) arg = "undefined";
@@ -1228,7 +1370,7 @@ function logPrettyPrint(...args) {
     output += `<span class="log-${typeof arg} ${acolor}">`;
     if (typeof arg === "object") output += JSON.stringify(arg);
     else output += arg;
-    output += " </span>";
+    output += "</span> ";
   }
   output += "</div>";
   return output;
@@ -1241,6 +1383,7 @@ async function setupLogger() {
   document.body.append(logMonitorJS);
   window.logger = logMonitorJS;
   window.logPrettyPrint = logPrettyPrint;
+  setupLogButtons();
 }
 function largeErrorOverlay(msg, err) {
   const overlay = document.createElement("div");
@@ -1290,14 +1433,14 @@ async function loadCurrentTemplate(data, htmlPath2) {
     const uiDisabled = Array.isArray(window.opts.ui_disabled) ? window.opts.ui_disabled : [];
     for (const disabled of uiDisabled) {
       if (currData.template.includes(disabled)) {
-        log("loadTemplate", currData.template, "disabled");
+        log("loadTemplate", { template: currData.template, status: "disabled" });
         return loadCurrentTemplate(data, htmlPath2);
       }
     }
     const uri = `${window.subpath}${htmlPath2}/templates/${currData.template}.html?${Date.now()}`;
     const response = await fetch(uri, { cache: "reload" });
     if (!response.ok) {
-      error("loadTemplate", currData.template, currData.target);
+      error("loadTemplate", { template: currData.template, target: currData.target, status: "error" });
       if (currData.target) currData.target.setAttribute("status", "error");
     } else {
       const text = await response.text();
@@ -1309,7 +1452,7 @@ async function loadCurrentTemplate(data, htmlPath2) {
         currData.target.setAttribute("status", "true");
         currData.target.append(tempDiv.firstElementChild);
       } else {
-        error("loadTemplateNoTarget", currData);
+        error("loadTemplateNoTarget", { template: currData.template, key: currData.key, status: "error" });
       }
     }
     const t1 = performance.now();
@@ -1326,7 +1469,7 @@ async function loadAllTemplates(htmlPath2, rootTemplate2, tabId2) {
       target: document.querySelector(tabId2)
     }
   ];
-  if (!data[0].target) error("LoadAllTemplates: missing target", data);
+  if (!data[0].target) error("LoadAllTemplates: missing target", { template: rootTemplate2, target: data[0].target, status: "error" });
   const t0 = performance.now();
   await loadCurrentTemplate(data, htmlPath2);
   const t1 = performance.now();
@@ -1334,7 +1477,7 @@ async function loadAllTemplates(htmlPath2, rootTemplate2, tabId2) {
   await replaceRootTemplate("#sdnext_app");
   const t2 = performance.now();
   timer("loadAllTemplates:replace", t2 - t1);
-  log("loadAllTemplates", `load=${Math.round(t1 - t0)} replace=${Math.round(t2 - t1)}`);
+  log("loadAllTemplates", { load: Math.round(t1 - t0), replace: Math.round(t2 - t1) });
 }
 
 // src/portals.ts
@@ -1376,7 +1519,7 @@ function movePortal(portalElem, tries, index, length) {
     const delay = timeout ? parseInt(timeout) : 500;
     setTimeout(() => movePortal(portalElem, tries + 1, index, length), delay);
   } else {
-    error("Element not found", { index, parent: parentSelector, id: dataSelector, el: portalElem, tgt: targetElem });
+    error("Element not found", { index, parent: parentSelector, id: dataSelector, el: portalElem, tgt: targetElem, status: "error" });
     portalElem.style.backgroundColor = "var(--color-error)";
     state.portalTotal += 1;
     rememberFailedPortal(portalElem);
@@ -1385,14 +1528,14 @@ function movePortal(portalElem, tries, index, length) {
 }
 async function loadAllPortals() {
   if (!state.appUiUx) {
-    error("loadAllPortals: appUiUx not found");
+    error("loadAllPortals: appUiUx not found", { status: "error" });
     return;
   }
   const t0 = performance.now();
   const portals = state.appUiUx.querySelectorAll(".portal");
   portals.forEach((elem, index, array) => movePortal(elem, 1, index, array.length));
   const t1 = performance.now();
-  log("loadAllPortals", `time=${Math.round(t1 - t0)} portals=${portals.length}`);
+  log("loadAllPortals", { portals: portals.length, time: Math.round(t1 - t0) });
   timer("loadAllPortals", t1 - t0);
 }
 function loadRetryPortals() {
@@ -1449,7 +1592,7 @@ async function removeStyleAssets() {
     count++;
   });
   const t1 = performance.now();
-  log("removeElements", `elements=${removedCount}/${count} stylesheets=${removedStylesheets} time=${Math.round(t1 - t0)}`);
+  log("removeElements", { removed: removedCount, total: count, stylesheets: removedStylesheets, time: Math.round(t1 - t0) });
   timer("removeElements", t1 - t0);
 }
 
@@ -1627,7 +1770,14 @@ async function applyAutoHide() {
     document.querySelector("#control-template-column-input"),
     document.querySelector("#control-template-column-output"),
     document.querySelector("#img2img-template-column-input"),
-    document.querySelector("#img2img-template-column-output")
+    document.querySelector("#img2img-template-column-output"),
+    document.querySelector("#video_results_panel"),
+    document.querySelector("#layout-caption-image"),
+    document.querySelector("#layout-caption-output-answer"),
+    document.querySelector("#layout-caption-output-clip"),
+    document.querySelector("#layout-caption-output-image"),
+    document.querySelector("#extras-template-column-input"),
+    document.querySelector("#extras-template-column-output")
   ];
   panels.forEach((panel) => {
     if (panel) {
@@ -1660,7 +1810,7 @@ async function applyTweaks() {
   const controlColumnsElement = controlColumns;
   async function setOrientation(mode) {
     if (!mode) mode = "auto";
-    log("setPanelOrientation", mode);
+    log("setPanelOrientation", { mode });
     if (mode === "auto") {
       if (window.innerHeight > window.innerWidth) {
         controlColumnsElement.classList.add("flex-force-column");
@@ -1718,22 +1868,10 @@ async function applyTweaks() {
   img2imgNav?.addEventListener("click", handleTabChange);
   controlNav?.addEventListener("click", handleTabChange);
   videoNav?.addEventListener("click", handleTabChange);
-  const serverLog = document.getElementById("logMonitorData");
-  const btnWrap = document.getElementById("btn_console_log_server_wrap");
-  if (btnWrap) {
-    btnWrap.onclick = () => {
-      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === "nowrap" ? "break-spaces" : "nowrap";
-    };
-  }
-  const clientLog = document.getElementById("logMonitorJS");
-  const btnClientWrap = document.getElementById("btn_console_log_client_wrap");
-  if (btnClientWrap) {
-    btnClientWrap.onclick = () => {
-      if (clientLog) clientLog.classList.toggle("wrap-div");
-    };
-  }
   const uiDisabled = Array.isArray(window.opts.ui_disabled) ? window.opts.ui_disabled : [];
   if (uiDisabled?.includes("logs")) {
+    const serverLog = document.getElementById("logMonitorData");
+    const clientLog = document.getElementById("logMonitorJS");
     if (serverLog) serverLog.style.display = "none";
     if (clientLog) clientLog.style.display = "none";
   }

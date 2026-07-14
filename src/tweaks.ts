@@ -9,7 +9,7 @@ export async function applyTweaks(): Promise<void> {
 
   async function setOrientation(mode: string): Promise<void> {
     if (!mode) mode = 'auto';
-    log('setPanelOrientation', mode);
+    log('setPanelOrientation', { mode });
     if (mode === 'auto') {
       if (window.innerHeight > window.innerWidth) { // device portrait mode
         controlColumnsElement.classList.add('flex-force-column');
@@ -74,23 +74,10 @@ export async function applyTweaks(): Promise<void> {
   controlNav?.addEventListener('click', handleTabChange);
   videoNav?.addEventListener('click', handleTabChange);
 
-  const serverLog = document.getElementById('logMonitorData');
-  const btnWrap = document.getElementById('btn_console_log_server_wrap');
-  if (btnWrap) {
-    btnWrap.onclick = () => {
-      if (serverLog) serverLog.style.whiteSpace = serverLog.style.whiteSpace === 'nowrap' ? 'break-spaces' : 'nowrap';
-    };
-  }
-  const clientLog = document.getElementById('logMonitorJS');
-  const btnClientWrap = document.getElementById('btn_console_log_client_wrap');
-  if (btnClientWrap) {
-    btnClientWrap.onclick = () => {
-      if (clientLog) clientLog.classList.toggle('wrap-div');
-    };
-  }
-
   const uiDisabled = Array.isArray(window.opts.ui_disabled) ? window.opts.ui_disabled as string[] : [];
   if (uiDisabled?.includes('logs')) {
+    const serverLog = document.getElementById('logMonitorData');
+    const clientLog = document.getElementById('logMonitorJS');
     if (serverLog) serverLog.style.display = 'none';
     if (clientLog) clientLog.style.display = 'none';
   }

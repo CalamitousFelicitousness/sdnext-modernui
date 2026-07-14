@@ -9,18 +9,31 @@
 
     <h2>
       Server log
-      <div id="btn_console_log_server_wrap" class="mask-icon overlay-icon icon-wrap" title="wrap log lines"></div>
+      <button class="lg secondary gradio-button tool float-right" id="btn_console_log_server_copy" data-hint="Copy info to clipboard">
+        <div class="mask-icon icon-copy"></div>
+      </button>
+      <button class="lg secondary gradio-button tool float-right" id="btn_console_log_server_wrap" data-hint="Wrap log lines">
+        <div class="mask-icon icon-wrap"></div>
+      </button>
+      <button class="lg secondary gradio-button tool float-right" id="btn_console_log_server_clear" data-hint="Clear errors">
+        <div class="mask-icon icon-clear"></div>
+      </button>
     </h2>
-    <div data-minSize="0" data-initSize="40" id="split-console-up" class="split-container">
-      <div data-selector="#logMonitorData" data-parent-selector="gradio-app" data-optional="true" class="portal no-bg no-padding"></div>
+    <div data-minSize="0" data-initSize="42" id="split-console-up" class="split-container">
+      <div id="logMonitorPlaceholder" data-selector="#logMonitorData" data-parent-selector="gradio-app" data-optional="true" class="portal no-bg no-padding full-height"></div>
     </div>
 
     <h2>
       Client log
-      <div id="btn_console_log_client_wrap" class="mask-icon overlay-icon icon-wrap" title="wrap log lines"></div>
+      <button class="lg secondary gradio-button tool float-right" id="btn_console_log_client_copy" data-hint="Copy info to clipboard">
+        <div class="mask-icon icon-copy"></div>
+      </button>
+      <button class="lg secondary gradio-button tool float-right" id="btn_console_log_client_wrap" data-hint="Wrap log lines">
+        <div class="mask-icon icon-wrap"></div>
+      </button>
     </h2>
     <div data-minSize="0" data-initSize="40" id="split-console-down" class="split-container">
-      <div data-selector="#logMonitorJS" data-parent-selector="" data-optional="true" class="portal no-bg no-padding"></div>
+      <div data-selector="#logMonitorJS" data-parent-selector="" data-optional="true" class="portal no-bg no-padding full-height"></div>
     </div>
 
   </div>

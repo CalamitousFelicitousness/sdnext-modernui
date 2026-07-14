@@ -34,7 +34,7 @@ export async function loadCurrentTemplate(data: TemplateDescriptor[], htmlPath: 
     const uiDisabled = Array.isArray(window.opts.ui_disabled) ? window.opts.ui_disabled as string[] : [];
     for (const disabled of uiDisabled) {
       if (currData.template.includes(disabled)) {
-        log('loadTemplate', currData.template, 'disabled');
+        log('loadTemplate', { template: currData.template, status: 'disabled' });
         return loadCurrentTemplate(data, htmlPath);
       }
     }
@@ -42,7 +42,7 @@ export async function loadCurrentTemplate(data: TemplateDescriptor[], htmlPath: 
     const uri = `${window.subpath}${htmlPath}/templates/${currData.template}.html?${Date.now()}`;
     const response = await fetch(uri, { cache: 'reload' });
     if (!response.ok) {
-      error('loadTemplate', currData.template, currData.target);
+      error('loadTemplate', { template: currData.template, target: currData.target, status: 'error' });
       if (currData.target) currData.target.setAttribute('status', 'error');
     } else {
       const text = await response.text();
@@ -54,7 +54,7 @@ export async function loadCurrentTemplate(data: TemplateDescriptor[], htmlPath: 
         currData.target.setAttribute('status', 'true');
         currData.target.append(tempDiv.firstElementChild!);
       } else {
-        error('loadTemplateNoTarget', currData);
+        error('loadTemplateNoTarget', { template: currData.template, key: currData.key, status: 'error' });
       }
     }
     const t1 = performance.now();
@@ -73,7 +73,7 @@ export async function loadAllTemplates(htmlPath: string, rootTemplate: string, t
     },
   ];
 
-  if (!data[0].target) error('LoadAllTemplates: missing target', data);
+  if (!data[0].target) error('LoadAllTemplates: missing target', { template: rootTemplate, target: data[0].target, status: 'error' });
   const t0 = performance.now();
   await loadCurrentTemplate(data, htmlPath);
   const t1 = performance.now();
@@ -81,5 +81,5 @@ export async function loadAllTemplates(htmlPath: string, rootTemplate: string, t
   await replaceRootTemplate('#sdnext_app');
   const t2 = performance.now();
   timer('loadAllTemplates:replace', t2 - t1);
-  log('loadAllTemplates', `load=${Math.round(t1 - t0)} replace=${Math.round(t2 - t1)}`);
+  log('loadAllTemplates', { load: Math.round(t1 - t0), replace: Math.round(t2 - t1) });
 }

@@ -28,6 +28,6 @@ export async function removeStyleAssets(): Promise<void> {
     count++;
   });
   const t1 = performance.now();
-  log('removeElements', `elements=${removedCount}/${count} stylesheets=${removedStylesheets} time=${Math.round(t1 - t0)}`);
+  log('removeElements', { removed: removedCount, total: count, stylesheets: removedStylesheets, time: Math.round(t1 - t0) });
   timer('removeElements', t1 - t0);
 }
