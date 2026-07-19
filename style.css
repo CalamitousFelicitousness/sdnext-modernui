@@ -1808,6 +1808,20 @@ li.item span {
   resize: none;
 }
 
+.position-right {
+  position: absolute;
+  right: 1em;
+}
+
+#extras-template-column-output {
+  margin-left: var(--sd-extra-gap);
+}
+
+#extras_results_header_panel {
+  min-height: 44px;
+  margin-top: 0;
+}
+
 #main-nav button {
   min-width: 3.1rem;
   max-width: 3.1rem;
