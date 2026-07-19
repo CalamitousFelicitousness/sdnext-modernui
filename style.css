@@ -36,6 +36,7 @@
   --color-red: palevioletred;
   --color-debug: #7F7F7F;
   --color-error: #6B0000;
+  --color-critical: #9B0080;
   --color-info: cyan;
   --color-trace: #666666;
   --color-warning: #FF9900;
