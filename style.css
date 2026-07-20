@@ -980,7 +980,18 @@ button:hover .mask-icon {
 .gradio-video video {
   height: auto;
   object-fit: var(--sd-image-fit);
-  width: 100%;
+  width: 100% !important;
+}
+
+#extras_info {
+  position: absolute;
+  bottom: var(--sd-gap-size-val);
+  align-self: center;
+}
+
+#extras_process_video_tab {
+  padding: 0;
+  margin: 0;
 }
 
 :not(.portal)>.gradio-video .wrap {
