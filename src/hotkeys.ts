@@ -11,7 +11,6 @@ async function selectHotKeyElement(e: KeyboardEvent, id: string) {
 export async function initHotkeys() {
   log('initHotkeys');
   document.addEventListener('keydown', (e: KeyboardEvent) => {
-    log('hotkey', { key: e.key, meta: e.metaKey, ctrl: e.ctrlKey, alt: e.altKey });
     if (e.key === 'C' && e.altKey) selectHotKeyElement(e, '#control_nav');
     if (e.key === '1' && e.altKey) selectHotKeyElement(e, '#control_nav');
     if (e.key === '2' && e.altKey) selectHotKeyElement(e, '#video_nav');
